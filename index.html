@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kinetic Energy Shooter</title>
+
+<style>
+
+body{
+    margin:0;
+    overflow:hidden;
+    background:#0f1724;
+    font-family:Arial;
+}
+
+#game{
+    width:100vw;
+    height:100vh;
+    position:relative;
+    overflow:hidden;
+    background:
+    linear-gradient(to bottom,#1c2940,#0a0f18);
+}
+
+#ground{
+    width:100%;
+    height:130px;
+    background:#243524;
+    position:absolute;
+    bottom:0;
+}
+
+#ui{
+    position:absolute;
+    top:20px;
+    left:20px;
+    color:white;
+    z-index:999;
+}
+
+#title{
+    font-size:40px;
+    color:#ffd84d;
+}
+
+#stage{
+    margin-top:10px;
+    font-size:28px;
+}
+
+#score{
+    margin-top:10px;
+    font-size:26px;
+    color:#00ffcc;
+}
+
+#guide{
+    margin-top:20px;
+    font-size:22px;
+}
+
+#message{
+    margin-top:20px;
+    font-size:28px;
+    color:#ffb347;
+}
+
+/* 생성기 */
+
+#generator{
+    width:120px;
+    height:120px;
+    position:absolute;
+}
+
+#generatorBody{
+    width:100%;
+    height:100%;
+    background:#4da6ff;
+    border-radius:20px;
+    box-shadow:0 0 25px #4da6ff;
+    position:absolute;
+}
+
+#cannon{
+    width:60px;
+    height:18px;
+    background:#d9d9d9;
+    position:absolute;
+    border-radius:10px;
+    transform-origin:left center;
+}
+
+/* 괴물 */
+
+.monster{
+    position:absolute;
+}
+
+.monsterBody{
+    width:100%;
+    height:100%;
+    background:#ff5c5c;
+    border-radius:50%;
+    position:absolute;
+    box-shadow:0 0 35px red;
+}
+
+.eye{
+    width:14px;
+    height:14px;
+    background:black;
+    border-radius:50%;
+    position:absolute;
+    top:30%;
+}
+
+.eye1{
+    left:25%;
+}
+
+.eye2{
+    right:25%;
+}
+
+.horn{
+    width:20px;
+    height:35px;
+    background:white;
+    position:absolute;
+    top:-15px;
+    border-radius:10px;
+}
+
+.horn1{
+    left:20px;
+    transform:rotate(-20deg);
+}
+
+.horn2{
+    right:20px;
+    transform:rotate(20deg);
+}
+
+/* 발사체 */
+
+.projectile{
+    position:absolute;
+    border-radius:50%;
+    background:orange;
+    box-shadow:0 0 25px orange;
+}
+
+/* 폭발 */
+
+.effect{
+    position:absolute;
+    font-size:60px;
+    animation:boom 0.7s forwards;
+}
+
+@keyframes boom{
+
+    0%{
+        opacity:1;
+        transform:scale(0.5);
+    }
+
+    100%{
+        opacity:0;
+        transform:scale(2);
+    }
+
+}
+
+/* 퀴즈 */
+
+#quizBox{
+
+    display:none;
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    background:#1b2435;
+    padding:40px;
+    border-radius:20px;
+    z-index:5000;
+    color:white;
+    text-align:center;
+    box-shadow:0 0 30px black;
+
+}
+
+#quizTitle{
+
+    font-size:40px;
+    color:#ffd84d;
+    margin-bottom:20px;
+
+}
+
+#quizQuestion{
+
+    font-size:30px;
+    margin-bottom:25px;
+
+}
+
+#quizInput{
+
+    width:170px;
+    height:55px;
+    font-size:30px;
+    text-align:center;
+    border:none;
+    border-radius:10px;
+
+}
+
+</style>
+</head>
+
+<body>
+
+<div id="game">
+
+<div id="ground"></div>
+
+<div id="ui">
+
+<div id="title">
+⚡ Kinetic Energy Shooter
+</div>
+
+<div id="stage">
+Stage 1
+</div>
+
+<div id="score">
+Score : 0
+</div>
+
+<div id="guide">
+ENTER : 발사<br>
+WASD : 이동
+</div>
+
+<div id="message"></div>
+
+</div>
+
+<!-- 생성기 -->
+
+<div id="generator">
+
+<div id="generatorBody"></div>
+
+<div id="cannon"></div>
+
+</div>
+
+<!-- 퀴즈 -->
+
+<div id="quizBox">
+
+<div id="quizTitle">
+⚡ 운동에너지 문제
+</div>
+
+<div id="quizQuestion">
+문제
+</div>
+
+<input id="quizInput" type="number">
+
+<div style="
+margin-top:20px;
+font-size:18px;
+">
+정답 입력 후 ENTER
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+const game =
+document.getElementById("game");
+
+const generator =
+document.getElementById("generator");
+
+const cannon =
+document.getElementById("cannon");
+
+/* 생성기 */
+
+let generatorX =
+window.innerWidth/2;
+
+let generatorY =
+window.innerHeight/2;
+
+/* 이동 */
+
+let velocityX = 0;
+let velocityY = 0;
+
+const keys = {};
+
+let direction = "right";
+
+/* 게임 */
+
+let projectiles = [];
+let monsters = [];
+
+let stage = 1;
+let score = 0;
+
+let gamePaused = false;
+
+let currentAnswer = 0;
+
+/* 퀴즈 */
+
+const quizBox =
+document.getElementById("quizBox");
+
+const quizQuestion =
+document.getElementById("quizQuestion");
+
+const quizInput =
+document.getElementById("quizInput");
+
+/* 운동에너지 */
+
+function kineticEnergy(m,v){
+
+    return 0.5 * m * v * v;
+
+}
+
+/* 몬스터 생성 */
+
+function createMonster(){
+
+    const monster =
+    document.createElement("div");
+
+    monster.className =
+    "monster";
+
+    let size =
+    80 + stage * 10;
+
+    monster.style.width =
+    size + "px";
+
+    monster.style.height =
+    size + "px";
+
+    monster.innerHTML = `
+
+    <div class="monsterBody"></div>
+
+    <div class="eye eye1"></div>
+    <div class="eye eye2"></div>
+
+    <div class="horn horn1"></div>
+    <div class="horn horn2"></div>
+
+    `;
+
+    game.appendChild(monster);
+
+    let side =
+    Math.floor(Math.random()*4);
+
+    let x,y;
+
+    if(side === 0){
+
+        x = Math.random()*window.innerWidth;
+        y = -150;
+
+    }
+
+    if(side === 1){
+
+        x = window.innerWidth + 150;
+        y = Math.random()*window.innerHeight;
+
+    }
+
+    if(side === 2){
+
+        x = Math.random()*window.innerWidth;
+        y = window.innerHeight + 150;
+
+    }
+
+    if(side === 3){
+
+        x = -150;
+        y = Math.random()*window.innerHeight;
+
+    }
+
+    monsters.push({
+
+        el:monster,
+
+        x:x,
+
+        y:y,
+
+        size:size,
+
+        speed:
+        1.5 + stage * 0.2
+
+    });
+
+}
+
+function spawnWave(){
+
+    for(let i=0;i<stage+1;i++){
+
+        createMonster();
+
+    }
+
+}
+
+spawnWave();
+
+/* 폭발 */
+
+function effect(x,y,text,color){
+
+    const e =
+    document.createElement("div");
+
+    e.className =
+    "effect";
+
+    e.innerHTML =
+    text;
+
+    e.style.left =
+    x + "px";
+
+    e.style.top =
+    y + "px";
+
+    e.style.color =
+    color;
+
+    game.appendChild(e);
+
+    setTimeout(()=>{
+
+        e.remove();
+
+    },700);
+
+}
+
+/* 게임오버 */
+
+function gameOver(){
+
+    alert("💀 GAME OVER");
+
+    location.reload();
+
+}
+
+/* 발사 */
+
+function shoot(){
+
+    if(gamePaused){
+
+        return;
+
+    }
+
+    const projectile =
+    document.createElement("div");
+
+    projectile.className =
+    "projectile";
+
+    projectile.style.width =
+    "24px";
+
+    projectile.style.height =
+    "24px";
+
+    let px =
+    generatorX + 48;
+
+    let py =
+    generatorY + 48;
+
+    let vx = 0;
+    let vy = 0;
+
+    if(direction === "right"){
+
+        px += 70;
+        py += 10;
+
+        vx = 12;
+
+    }
+
+    if(direction === "left"){
+
+        px -= 10;
+        py += 10;
+
+        vx = -12;
+
+    }
+
+    if(direction === "up"){
+
+        px += 18;
+        py -= 10;
+
+        vy = -12;
+
+    }
+
+    if(direction === "down"){
+
+        px += 18;
+        py += 70;
+
+        vy = 12;
+
+    }
+
+    projectile.style.left =
+    px + "px";
+
+    projectile.style.top =
+    py + "px";
+
+    game.appendChild(projectile);
+
+    projectiles.push({
+
+        el:projectile,
+
+        x:px,
+
+        y:py,
+
+        vx:vx,
+
+        vy:vy
+
+    });
+
+}
+
+/* 퀴즈 난이도 증가 */
+
+function startQuiz(){
+
+    gamePaused = true;
+
+    quizBox.style.display =
+    "block";
+
+    let m;
+    let v;
+
+    if(stage <= 3){
+
+        m =
+        Math.floor(Math.random()*5)+1;
+
+        let speeds =
+        [2,4,6,8];
+
+        v =
+        speeds[
+        Math.floor(
+        Math.random()*speeds.length
+        )
+        ];
+
+    }
+
+    else if(stage <= 6){
+
+        m =
+        Math.floor(Math.random()*10)+5;
+
+        let speeds =
+        [4,6,8,10,12];
+
+        v =
+        speeds[
+        Math.floor(
+        Math.random()*speeds.length
+        )
+        ];
+
+    }
+
+    else if(stage <= 10){
+
+        m =
+        Math.floor(Math.random()*15)+10;
+
+        let speeds =
+        [6,8,10,12,14,16];
+
+        v =
+        speeds[
+        Math.floor(
+        Math.random()*speeds.length
+        )
+        ];
+
+    }
+
+    else{
+
+        m =
+        Math.floor(Math.random()*25)+15;
+
+        let speeds =
+        [10,12,14,16,18,20];
+
+        v =
+        speeds[
+        Math.floor(
+        Math.random()*speeds.length
+        )
+        ];
+
+    }
+
+    currentAnswer =
+    kineticEnergy(m,v);
+
+    quizQuestion.innerHTML =
+    `
+    Stage ${stage}<br><br>
+
+    질량이 ${m}kg이고<br>
+    속도가 ${v}m/s일 때<br><br>
+
+    운동에너지 = ?
+    `;
+
+    quizInput.value = "";
+
+    quizInput.focus();
+
+}
+
+/* 정답 확인 */
+
+function checkQuiz(){
+
+    /* 아무것도 입력 안했으면 */
+
+    if(quizInput.value.trim() === ""){
+
+        return;
+
+    }
+
+    let userAnswer =
+    Number(quizInput.value);
+
+    if(userAnswer === currentAnswer){
+
+        quizBox.style.display =
+        "none";
+
+        gamePaused = false;
+
+        document.getElementById("message")
+        .innerText =
+        "⚡ 정답!";
+
+        spawnWave();
+
+    }
+
+    else{
+
+        alert("❌ 틀렸다!");
+
+        location.reload();
+
+    }
+
+}
+
+/* 게임 루프 */
+
+function gameLoop(){
+
+    if(gamePaused){
+
+        requestAnimationFrame(gameLoop);
+
+        return;
+
+    }
+
+    /* 이동 */
+
+    let accel = 0.7;
+    let friction = 0.90;
+    let maxSpeed = 7;
+
+    if(keys["a"]){
+
+        velocityX -= accel;
+        direction = "left";
+
+    }
+
+    if(keys["d"]){
+
+        velocityX += accel;
+        direction = "right";
+
+    }
+
+    if(keys["w"]){
+
+        velocityY -= accel;
+        direction = "up";
+
+    }
+
+    if(keys["s"]){
+
+        velocityY += accel;
+        direction = "down";
+
+    }
+
+    velocityX *= friction;
+    velocityY *= friction;
+
+    if(velocityX > maxSpeed){
+
+        velocityX = maxSpeed;
+
+    }
+
+    if(velocityX < -maxSpeed){
+
+        velocityX = -maxSpeed;
+
+    }
+
+    if(velocityY > maxSpeed){
+
+        velocityY = maxSpeed;
+
+    }
+
+    if(velocityY < -maxSpeed){
+
+        velocityY = -maxSpeed;
+
+    }
+
+    generatorX += velocityX;
+    generatorY += velocityY;
+
+    /* 화면 제한 */
+
+    if(generatorX < 0){
+
+        generatorX = 0;
+
+    }
+
+    if(generatorX >
+        window.innerWidth - 120){
+
+        generatorX =
+        window.innerWidth - 120;
+
+    }
+
+    if(generatorY < 0){
+
+        generatorY = 0;
+
+    }
+
+    if(generatorY >
+        window.innerHeight - 140){
+
+        generatorY =
+        window.innerHeight - 140;
+
+    }
+
+    generator.style.left =
+    generatorX + "px";
+
+    generator.style.top =
+    generatorY + "px";
+
+    /* 캐논 방향 */
+
+    if(direction === "right"){
+
+        cannon.style.left = "95px";
+        cannon.style.top = "50px";
+        cannon.style.transform = "rotate(0deg)";
+
+    }
+
+    if(direction === "left"){
+
+        cannon.style.left = "-35px";
+        cannon.style.top = "50px";
+        cannon.style.transform = "rotate(180deg)";
+
+    }
+
+    if(direction === "up"){
+
+        cannon.style.left = "30px";
+        cannon.style.top = "0px";
+        cannon.style.transform = "rotate(-90deg)";
+
+    }
+
+    if(direction === "down"){
+
+        cannon.style.left = "30px";
+        cannon.style.top = "100px";
+        cannon.style.transform = "rotate(90deg)";
+
+    }
+
+    /* 몬스터 이동 */
+
+    for(let i=monsters.length-1;i>=0;i--){
+
+        let m =
+        monsters[i];
+
+        let dx =
+        generatorX - m.x;
+
+        let dy =
+        generatorY - m.y;
+
+        let dist =
+        Math.sqrt(dx*dx + dy*dy);
+
+        m.x +=
+        (dx/dist) * m.speed;
+
+        m.y +=
+        (dy/dist) * m.speed;
+
+        m.el.style.left =
+        m.x + "px";
+
+        m.el.style.top =
+        m.y + "px";
+
+        if(dist < 70){
+
+            effect(
+            generatorX,
+            generatorY,
+            "💀",
+            "red"
+            );
+
+            gameOver();
+
+        }
+
+    }
+
+    /* 발사체 이동 */
+
+    for(let i=projectiles.length-1;i>=0;i--){
+
+        let p =
+        projectiles[i];
+
+        p.x += p.vx;
+        p.y += p.vy;
+
+        p.el.style.left =
+        p.x + "px";
+
+        p.el.style.top =
+        p.y + "px";
+
+        if(
+        p.x < -50 ||
+        p.x > window.innerWidth+50 ||
+        p.y < -50 ||
+        p.y > window.innerHeight+50
+        ){
+
+            p.el.remove();
+
+            projectiles.splice(i,1);
+
+            continue;
+
+        }
+
+        /* 충돌 */
+
+        for(let j=monsters.length-1;j>=0;j--){
+
+            let m =
+            monsters[j];
+
+            let dx =
+            p.x - m.x;
+
+            let dy =
+            p.y - m.y;
+
+            let dist =
+            Math.sqrt(dx*dx + dy*dy);
+
+            if(dist < m.size/2 + 12){
+
+                effect(
+                m.x,
+                m.y,
+                "💥",
+                "white"
+                );
+
+                p.el.remove();
+                m.el.remove();
+
+                projectiles.splice(i,1);
+                monsters.splice(j,1);
+
+                score += 10;
+
+                document.getElementById("score")
+                .innerText =
+                "Score : " + score;
+
+                break;
+
+            }
+
+        }
+
+    }
+
+    /* 스테이지 */
+
+    if(monsters.length === 0){
+
+        stage++;
+
+        document.getElementById("stage")
+        .innerText =
+        "Stage " + stage;
+
+        document.getElementById("message")
+        .innerText =
+        "⚡ 문제를 풀어라!";
+
+        startQuiz();
+
+    }
+
+    requestAnimationFrame(gameLoop);
+
+}
+
+gameLoop();
+
+/* 키 */
+
+document.addEventListener("keydown",(e)=>{
+
+    keys[e.key.toLowerCase()] = true;
+
+    if(e.key === "Enter"){
+
+        shoot();
+
+    }
+
+});
+
+document.addEventListener("keyup",(e)=>{
+
+    keys[e.key.toLowerCase()] = false;
+
+});
+
+/* 퀴즈 */
+
+quizInput.addEventListener("keydown",(e)=>{
+
+    if(e.key === "Enter"){
+
+        checkQuiz();
+
+    }
+
+});
+
+</script>
+
+</body>
+</html>
